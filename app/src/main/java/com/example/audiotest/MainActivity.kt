@@ -52,7 +52,7 @@ fun MainAppScreen(viewModel: AudioViewModel) {
         Triple("Playback", "playback", Icons.Filled.PlayArrow),
         Triple("Record", "record", Icons.Filled.Mic),
         Triple("VoIP", "voip", Icons.Filled.Call),
-        Triple("MultiTest", "multitest", Icons.Filled.GridView)
+        Triple("Multi", "multi", Icons.Filled.GridView)
     )
 
     Scaffold(
@@ -68,12 +68,13 @@ fun MainAppScreen(viewModel: AudioViewModel) {
                         label = { Text(title) },
                         selected = currentDestination?.hierarchy?.any { it.route == route } == true,
                         onClick = {
+                            if (currentDestination?.hierarchy?.any { it.route == route } == true) return@NavigationBarItem
                             navController.navigate(route) {
                                 popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                                    saveState = false
                                 }
                                 launchSingleTop = true
-                                restoreState = true
+                                restoreState = false
                             }
                         }
                     )
@@ -84,12 +85,24 @@ fun MainAppScreen(viewModel: AudioViewModel) {
         NavHost(
             navController = navController,
             startDestination = "playback",
-            modifier = Modifier.padding(innerPadding).fillMaxSize()
+            modifier = Modifier.padding(innerPadding).fillMaxSize(),
+            enterTransition = { androidx.compose.animation.EnterTransition.None },
+            exitTransition = { androidx.compose.animation.ExitTransition.None },
+            popEnterTransition = { androidx.compose.animation.EnterTransition.None },
+            popExitTransition = { androidx.compose.animation.ExitTransition.None }
         ) {
-            composable("playback") { PlaybackScreen(viewModel) }
-            composable("record") { RecordScreen(viewModel) }
-            composable("voip") { VoipScreen(viewModel) }
-            composable("multitest") { MultiTestScreen(viewModel) }
+            composable("playback") {
+                SplitViewLayout(title = "Playback Configuration", initialSplitCount = 1) { index -> PlaybackScreen(viewModel, instanceId = 10 + (index * 10)) }
+            }
+            composable("record") {
+                SplitViewLayout(title = "Record Configuration", initialSplitCount = 1) { index -> RecordScreen(viewModel, instanceId = 50 + (index * 10)) }
+            }
+            composable("voip") {
+                SplitViewLayout(title = "VoIP Configuration", initialSplitCount = 1) { index -> VoipScreen(viewModel, instanceId = 90 + (index * 10)) }
+            }
+            composable("multi") {
+                SplitViewLayout(title = "Multi Test", initialSplitCount = 4) { index -> TestSlot(viewModel = viewModel, instanceId = 130 + (index * 10)) }
+            }
         }
     }
 }

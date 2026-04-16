@@ -4,98 +4,173 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.audiotest.audio.AudioEngine
 import com.example.audiotest.audio.AudioInfo
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Audio format map (mirrors Flutter's AudioConfigFields.audioFormatMap)
+// ─────────────────────────────────────────────────────────────────────────────
+
+private val audioFormatMap = mapOf(
+    3 to "8-bit PCM",
+    2 to "16-bit PCM",
+    21 to "24-bit PCM",
+    4 to "Float PCM"
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper: resolve a map key label like Flutter's _mapKeyLabel
+// ─────────────────────────────────────────────────────────────────────────────
+
+private fun mapKeyLabel(map: Map<String, Int>, value: Int?): String {
+    if (value == null) return "Unknown"
+    if (map.isEmpty()) return "Loading... ($value)"
+    for ((key, v) in map) {
+        if (v == value) return "$key ($v)"
+    }
+    return "Unknown ($value)"
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AudioInfoCard — matches Flutter's AudioInfoCard widget
+// ─────────────────────────────────────────────────────────────────────────────
+
 @Composable
-fun AudioInfoCard(audioInfo: AudioInfo?) {
+fun AudioInfoCard(title: String, audioInfo: AudioInfo?) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+        )
     ) {
         if (audioInfo == null) {
             Text(
                 "No active audio track information.",
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.padding(12.dp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             return@Card
         }
 
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            // Title
             Text(
-                "Active Audio Info",
-                style = MaterialTheme.typography.titleMedium,
+                title,
+                style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
-            
-            InfoRow("ID", audioInfo.id.toString())
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // ── Basic ─────────────────────────────────────────────────────────
+            val formatName = audioFormatMap[audioInfo.audioFormat]
+            val formatLabel = if (formatName != null) {
+                "$formatName (${audioInfo.audioFormat})"
+            } else {
+                "Unknown (${audioInfo.audioFormat})"
+            }
+
             InfoRow("Sample Rate", "${audioInfo.sampleRate} Hz")
-            InfoRow("Channels", audioInfo.channelCount.toString())
-            InfoRow("Format", audioInfo.audioFormat.toString())
-            
+            InfoRow("Channel Count", audioInfo.channelCount.toString())
+            InfoRow("Format", formatLabel)
+
             if (audioInfo.isOffloaded != null) {
-                InfoRow("Offloaded", audioInfo.isOffloaded.toString(), isHighlight = audioInfo.isOffloaded)
+                InfoRow("Offloaded", if (audioInfo.isOffloaded) "Yes" else "No")
+            }
+
+            // ── Attributes ────────────────────────────────────────────────────
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            SectionLabel("Attributes")
+
+            if (audioInfo.usage != null) {
+                InfoRow("Usage", mapKeyLabel(AudioEngine.cachedUsagesMap, audioInfo.usage))
+            }
+            if (audioInfo.contentType != null) {
+                InfoRow("Content Type", mapKeyLabel(AudioEngine.cachedContentTypesMap, audioInfo.contentType))
+            }
+            if (audioInfo.flags != null) {
+                InfoRow("Flags", mapKeyLabel(AudioEngine.cachedFlagsMap, audioInfo.flags))
             }
             if (audioInfo.audioSource != null) {
-                InfoRow("Source", audioInfo.audioSource.toString())
+                InfoRow("Audio Source", mapKeyLabel(AudioEngine.cachedAudioSourcesMap, audioInfo.audioSource))
             }
-            if (audioInfo.usage != null) {
-                InfoRow("Usage", audioInfo.usage.toString())
-            }
-            
+
+            // ── Routed Devices ────────────────────────────────────────────────
             audioInfo.routedDevices?.let { devices ->
-                Text(
-                    "Routed Devices",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
-                    color = MaterialTheme.colorScheme.secondary
-                )
-                devices.forEach { device ->
-                    Text(
-                        "- ${device.name} [${device.type}]",
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(start = 8.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                if (devices.isNotEmpty()) {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    SectionLabel("Routed Devices")
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    devices.forEachIndexed { index, device ->
+                        if (index > 0) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                        if (devices.size > 1) {
+                            Text(
+                                "Device ${index + 1}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        InfoRow("Name", device.name)
+                        InfoRow("Type", device.type)
+                        InfoRow("ID", device.id.toString())
+                    }
                 }
             }
         }
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// InfoRow — matches Flutter's InfoRow widget
+// ─────────────────────────────────────────────────────────────────────────────
+
 @Composable
-fun InfoRow(label: String, value: String, isHighlight: Boolean = false) {
+fun InfoRow(label: String, value: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 2.dp)
     ) {
         Text(
-            "$label: ",
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
+            label,
+            modifier = Modifier.weight(2f),
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(modifier = Modifier.weight(1f))
         Text(
             value,
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (isHighlight) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant
+            modifier = Modifier.weight(3f),
+            style = MaterialTheme.typography.bodySmall,
+            textAlign = TextAlign.End
         )
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SectionLabel
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun SectionLabel(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.bodySmall,
+        fontWeight = FontWeight.Bold
+    )
 }
