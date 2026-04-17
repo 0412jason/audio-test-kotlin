@@ -75,7 +75,7 @@ fun RecordScreen(viewModel: AudioViewModel, modifier: Modifier = Modifier, insta
             if (data.id == instanceId) {
                 if (data.path != null) {
                     savedFilePath = data.path
-                } else {
+                } else if (isRecording) {
                     amplitudes.add(data.amp.toFloat())
                     if (amplitudes.size > MAX_AMPLITUDES) {
                         amplitudes.removeAt(0)
@@ -195,7 +195,7 @@ fun RecordScreen(viewModel: AudioViewModel, modifier: Modifier = Modifier, insta
             ) {
                 Checkbox(
                     checked = saveToFile,
-                    onCheckedChange = if (isRecording) null else { v -> saveToFile = v },
+                    onCheckedChange = { saveToFile = it },
                     enabled = !isRecording
                 )
                 Text("Save to WAV File", style = MaterialTheme.typography.bodySmall)

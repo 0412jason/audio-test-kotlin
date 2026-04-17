@@ -84,7 +84,7 @@ fun VoipScreen(viewModel: AudioViewModel, modifier: Modifier = Modifier, instanc
             if (data.id == instanceId) {
                 if (data.path != null) {
                     savedFilePath = data.path
-                } else {
+                } else if (isCalling) {
                     amplitudes.add(data.amp.toFloat())
                     if (amplitudes.size > MAX_AMPLITUDES) {
                         amplitudes.removeAt(0)
@@ -336,7 +336,7 @@ fun VoipScreen(viewModel: AudioViewModel, modifier: Modifier = Modifier, instanc
             ) {
                 Checkbox(
                     checked = saveToFile,
-                    onCheckedChange = if (isCalling) null else { v -> saveToFile = v },
+                    onCheckedChange = { saveToFile = it },
                     enabled = !isCalling
                 )
                 Text("TX Save to WAV File", style = MaterialTheme.typography.bodySmall)
