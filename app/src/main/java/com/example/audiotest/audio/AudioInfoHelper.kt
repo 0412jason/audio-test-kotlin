@@ -46,8 +46,10 @@ object AudioInfoHelper {
         val contentTypes = mutableMapOf<String, Int>()
         val flags = mutableMapOf<String, Int>()
 
-        for (field in AudioAttributes::class.java.fields) {
+        // getDeclaredFields() includes non-public (@hide) fields; setAccessible(true) unlocks them.
+        for (field in AudioAttributes::class.java.declaredFields) {
             try {
+                field.isAccessible = true
                 if (field.type == Int::class.javaPrimitiveType) {
                     val value = field.getInt(null)
                     val name = field.name
@@ -61,6 +63,26 @@ object AudioInfoHelper {
                 }
             } catch (e: Exception) {
                 // Ignore inaccessible fields
+            }
+        }
+
+        // Fallback: manually add @hide flags that Android's hidden API enforcement may block via reflection.
+        // Values are stable across AOSP versions (confirmed in AudioAttributes.java source).
+        val hiddenFlags = mapOf(
+            "FLAG_SECURE"              to 0x2,     // 1 << 1
+            "FLAG_SCO"                 to 0x4,     // 1 << 2
+            "FLAG_DEEP_BUFFER"         to 0x200,   // 1 << 9
+            "FLAG_NO_MEDIA_PROJECTION" to 0x400,   // 1 << 10
+            "FLAG_MUTE_HAPTIC"         to 0x800,   // 1 << 11
+            "FLAG_NO_SYSTEM_CAPTURE"   to 0x1000,  // 1 << 12
+            "FLAG_CAPTURE_PRIVATE"     to 0x2000,  // 1 << 13
+            "FLAG_CONTENT_SPATIALIZED" to 0x4000,  // 1 << 14
+            "FLAG_NEVER_SPATIALIZE"    to 0x8000,  // 1 << 15
+            "FLAG_SUPPRESS_BROADCAST"  to 0x10000, // 1 << 16
+        )
+        for ((name, value) in hiddenFlags) {
+            if (!flags.containsKey(name)) {
+                flags[name] = value
             }
         }
 
