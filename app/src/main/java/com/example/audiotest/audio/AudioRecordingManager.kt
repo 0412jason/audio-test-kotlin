@@ -38,6 +38,7 @@ class AudioRecordingManager(private val activity: Activity) {
         stopRecording(instanceId)
 
         if (ActivityCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(activity, arrayOf(Manifest.permission.RECORD_AUDIO), 100)
             return
         }
 
