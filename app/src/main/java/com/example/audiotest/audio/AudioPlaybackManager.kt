@@ -49,11 +49,7 @@ class AudioPlaybackManager(private val activity: Activity) {
             return
         }
 
-        val audioAttributes = AudioAttributes.Builder()
-            .setUsage(usage)
-            .setContentType(contentType)
-            .setFlags(flags)
-            .build()
+        val audioAttributes = buildAudioAttributes(usage, contentType, flags)
 
         isPlayingMap[instanceId] = true
         isPausedMap[instanceId] = false
@@ -511,6 +507,61 @@ class AudioPlaybackManager(private val activity: Activity) {
             }
 
             notifyAmplitude(instanceId, normalizedAmp)
+        }
+    }
+
+    /**
+     * Builds an [AudioAttributes] with the given parameters.
+     *
+     * [AudioAttributes.Builder.setFlags] silently strips @hide flags (e.g. FLAG_DEEP_BUFFER = 0x200).
+     * As a workaround, we parcelize the built object and patch the flags int at byte offset 12,
+     * which corresponds to `mFlags` in the stable parcel layout (API 21+):
+     *   offset  0 → mUsage       (int)
+     *   offset  4 → mContentType (int)
+     *   offset  8 → mSource      (int)
+     *   offset 12 → mFlags       (int)  ← patch here
+     * The private Parcel constructor reads mFlags directly without filtering.
+     */
+    private fun buildAudioAttributes(usage: Int, contentType: Int, flags: Int): AudioAttributes {
+        val built = AudioAttributes.Builder()
+            .setUsage(usage)
+            .setContentType(contentType)
+            .setFlags(flags)
+            .build()
+
+        // If flags survived Builder's filter (or nothing special requested), use as-is
+        if (flags == 0 || built.flags == flags) return built
+
+        Log.d("AudioPlaybackManager",
+            "setFlags stripped hidden flags: built=0x${built.flags.toString(16).uppercase()}, " +
+            "wanted=0x${flags.toString(16).uppercase()}. Patching via Parcel...")
+
+        return try {
+            // Serialize
+            val writeParcel = android.os.Parcel.obtain()
+            built.writeToParcel(writeParcel, 0)
+            val data = writeParcel.marshall()
+            writeParcel.recycle()
+
+            // Patch mFlags at byte offset 12
+            val buf = java.nio.ByteBuffer.wrap(data).order(java.nio.ByteOrder.nativeOrder())
+            val before = buf.getInt(12)
+            buf.putInt(12, flags)
+
+            // Deserialize — private constructor reads mFlags directly, no filtering
+            val readParcel = android.os.Parcel.obtain()
+            readParcel.unmarshall(data, 0, data.size)
+            readParcel.setDataPosition(0)
+            val copy = AudioAttributes.CREATOR.createFromParcel(readParcel)
+            readParcel.recycle()
+
+            Log.d("AudioPlaybackManager",
+                "Parcel patch: offset-12 0x${before.toString(16).uppercase()} → 0x${flags.toString(16).uppercase()}, " +
+                "verified copy.flags=0x${copy.flags.toString(16).uppercase()}")
+            copy
+        } catch (e: Exception) {
+            Log.w("AudioPlaybackManager", "Parcel patch failed: $e")
+            built
         }
     }
 
