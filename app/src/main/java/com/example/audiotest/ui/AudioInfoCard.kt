@@ -43,6 +43,35 @@ private fun mapKeyLabel(map: Map<String, Int>, value: Int?): String {
     return "Unknown ($value)"
 }
 
+private fun flagsKeyLabel(map: Map<String, Int>, value: Int?): String {
+    if (value == null) return "Unknown"
+    if (value == 0) return "None (0)"
+    if (map.isEmpty()) return "Loading... (0x${value.toString(16).uppercase()})"
+
+    val nonNullValue = value!!
+    val setKeys = mutableListOf<String>()
+    var remaining = nonNullValue
+
+    // Check bits from highest to lowest or just iterate
+    for ((key, v) in map.entries.sortedByDescending { it.value }) {
+        if (v != 0 && (remaining and v) == v) {
+            setKeys.add(key)
+            remaining = remaining and v.inv()
+        }
+    }
+
+    val labels = setKeys.joinToString(" | ")
+    return if (remaining != 0) {
+        if (labels.isEmpty()) {
+            "Unknown (0x${nonNullValue.toString(16).uppercase()})"
+        } else {
+            "$labels | Unknown (0x${remaining.toString(16).uppercase()}) [0x${nonNullValue.toString(16).uppercase()}]"
+        }
+    } else {
+        "$labels [0x${nonNullValue.toString(16).uppercase()}]"
+    }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // AudioInfoCard — matches Flutter's AudioInfoCard widget
 // ─────────────────────────────────────────────────────────────────────────────
@@ -102,7 +131,7 @@ fun AudioInfoCard(title: String, audioInfo: AudioInfo?) {
                 InfoRow("Content Type", mapKeyLabel(AudioEngine.cachedContentTypesMap, audioInfo.contentType))
             }
             if (audioInfo.flags != null) {
-                InfoRow("Flags", mapKeyLabel(AudioEngine.cachedFlagsMap, audioInfo.flags))
+                InfoRow("Flags", flagsKeyLabel(AudioEngine.cachedFlagsMap, audioInfo.flags))
             }
             if (audioInfo.audioSource != null) {
                 InfoRow("Audio Source", mapKeyLabel(AudioEngine.cachedAudioSourcesMap, audioInfo.audioSource))
