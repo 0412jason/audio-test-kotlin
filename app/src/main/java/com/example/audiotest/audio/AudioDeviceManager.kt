@@ -56,6 +56,85 @@ class AudioDeviceManager(private val context: Context) {
         }
     }
 
+    fun setPreferredDeviceForStrategy(streamType: Int, deviceId: Int): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
+        try {
+            // 1. Get strategy by streamType
+            val strategyClass = Class.forName("android.media.audiopolicy.AudioProductStrategy")
+            val getStrategiesMethod = try {
+                AudioManager::class.java.getMethod("getAudioProductStrategies")
+            } catch (e: NoSuchMethodException) {
+                strategyClass.getMethod("getAudioProductStrategies")
+            }
+            
+            val strategies = if (java.lang.reflect.Modifier.isStatic(getStrategiesMethod.modifiers)) {
+                getStrategiesMethod.invoke(null) as? List<*>
+            } else {
+                getStrategiesMethod.invoke(audioManager) as? List<*>
+            } ?: return false
+            
+            val supportsStreamMethod = strategyClass.getMethod("supportsAudioStreamType", Int::class.javaPrimitiveType)
+            val strategy = strategies.firstOrNull { 
+                supportsStreamMethod.invoke(it, streamType) as? Boolean == true 
+            } ?: return false
+
+            // 2. Get device
+            val devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+            val deviceInfo = devices.firstOrNull { it.id == deviceId } ?: return false
+
+            // 3. Create AudioDeviceAttributes
+            val attributesClass = Class.forName("android.media.AudioDeviceAttributes")
+            var attributesObj: Any? = null
+            try {
+                val constructor = attributesClass.getConstructor(AudioDeviceInfo::class.java)
+                attributesObj = constructor.newInstance(deviceInfo)
+            } catch (e: Exception) {
+                val constructor = attributesClass.getConstructor(Int::class.javaPrimitiveType, Int::class.javaPrimitiveType, String::class.java)
+                attributesObj = constructor.newInstance(2 /* ROLE_OUTPUT */, deviceInfo.type, deviceInfo.address)
+            }
+            
+            if (attributesObj == null) return false
+
+            // 4. Set it
+            val setPreferredMethod = AudioManager::class.java.getMethod("setPreferredDeviceForStrategy", strategyClass, attributesClass)
+            val result = setPreferredMethod.invoke(audioManager, strategy, attributesObj) as? Boolean
+            return result == true
+        } catch (e: Exception) {
+            Log.e("AudioDeviceManager", "setPreferredDeviceForStrategy failed", e)
+            return false
+        }
+    }
+
+    fun removePreferredDeviceForStrategy(streamType: Int): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
+        try {
+            val strategyClass = Class.forName("android.media.audiopolicy.AudioProductStrategy")
+            val getStrategiesMethod = try {
+                AudioManager::class.java.getMethod("getAudioProductStrategies")
+            } catch (e: NoSuchMethodException) {
+                strategyClass.getMethod("getAudioProductStrategies")
+            }
+            
+            val strategies = if (java.lang.reflect.Modifier.isStatic(getStrategiesMethod.modifiers)) {
+                getStrategiesMethod.invoke(null) as? List<*>
+            } else {
+                getStrategiesMethod.invoke(audioManager) as? List<*>
+            } ?: return false
+            
+            val supportsStreamMethod = strategyClass.getMethod("supportsAudioStreamType", Int::class.javaPrimitiveType)
+            val strategy = strategies.firstOrNull { 
+                supportsStreamMethod.invoke(it, streamType) as? Boolean == true 
+            } ?: return false
+
+            val removePreferredMethod = AudioManager::class.java.getMethod("removePreferredDeviceForStrategy", strategyClass)
+            val result = removePreferredMethod.invoke(audioManager, strategy) as? Boolean
+            return result == true
+        } catch (e: Exception) {
+            Log.e("AudioDeviceManager", "removePreferredDeviceForStrategy failed", e)
+            return false
+        }
+    }
+
     private fun registerAudioDeviceCallback() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (audioDeviceCallback != null) return // Already registered
