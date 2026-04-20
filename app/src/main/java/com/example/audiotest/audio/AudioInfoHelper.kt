@@ -25,6 +25,22 @@ object AudioInfoHelper {
         return options
     }
 
+    fun getAudioStreamOptions(): Map<String, Int> {
+        val options = mutableMapOf<String, Int>()
+        for (field in AudioManager::class.java.fields) {
+            try {
+                if (field.type == Int::class.javaPrimitiveType && field.name.startsWith("STREAM_")) {
+                    val value = field.getInt(null)
+                    val name = field.name
+                    options[name] = value
+                }
+            } catch (e: Exception) {
+                // Ignore inaccessible fields
+            }
+        }
+        return options
+    }
+
     fun getAudioSourceOptions(): Map<String, Int> {
         val options = mutableMapOf<String, Int>()
         for (field in android.media.MediaRecorder.AudioSource::class.java.fields) {

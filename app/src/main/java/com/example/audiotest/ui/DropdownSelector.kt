@@ -55,7 +55,8 @@ fun DropdownSelector(
                 val positionInWindow = coordinates.positionInWindow()
                 val bottomOfTextFieldDp = with(density) { (positionInWindow.y + coordinates.size.height).toDp() }
                 // Calculate available space to the bottom of the screen (leaving margin)
-                maxHeight = (screenHeightDp - bottomOfTextFieldDp - 32.dp).coerceAtLeast(100.dp)
+                val calculatedHeight = screenHeightDp - bottomOfTextFieldDp - 32.dp
+                maxHeight = calculatedHeight.coerceIn(100.dp, 300.dp)
             }
     ) {
         OutlinedTextField(

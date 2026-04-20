@@ -147,7 +147,7 @@ fun VoipScreen(viewModel: AudioViewModel, modifier: Modifier = Modifier, instanc
             // 2. Play 2 seconds of beep beep sound as ringtone
             AudioEngine.playbackManager.startPlayback(
                 ringtoneId, 48000, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_24BIT_PACKED,
-                6 /* USAGE_NOTIFICATION_RINGTONE */, 4 /* CONTENT_TYPE_SONIFICATION */, 0, null, null, false
+                6 /* USAGE_NOTIFICATION_RINGTONE */, 4 /* CONTENT_TYPE_SONIFICATION */, 0, -1, null, null, false
             )
 
             // 2 seconds of beeps (400ms on, 100ms off, 4 times)
@@ -180,7 +180,7 @@ fun VoipScreen(viewModel: AudioViewModel, modifier: Modifier = Modifier, instanc
             // Start RX (Playback)
             AudioEngine.playbackManager.startPlayback(
                 instanceId + 1, rxSampleRate, rxChannelConfig, rxAudioFormat,
-                2 /* USAGE_VOICE_COMMUNICATION */, 1 /* CONTENT_TYPE_SPEECH */, 0,
+                2 /* USAGE_VOICE_COMMUNICATION */, 1 /* CONTENT_TYPE_SPEECH */, 0, -1,
                 selectedOutputDeviceId, null, false
             )
 
