@@ -575,49 +575,27 @@ class AudioPlaybackManager(private val activity: Activity) {
 
     private fun sendAudioTrackInfo(instanceId: Int, track: AudioTrack, isOffloaded: Boolean) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CUPCAKE) {
-            val infoMap = mutableMapOf<String, Any>(
-                "id" to instanceId,
-                "sampleRate" to track.sampleRate,
-                "channelCount" to track.channelCount,
-                "audioFormat" to track.audioFormat,
-                "isOffloaded" to isOffloaded
-            )
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                val attrs = track.audioAttributes
-                infoMap["usage"] = attrs.usage
-                infoMap["contentType"] = attrs.contentType
-                infoMap["flags"] = attrs.flags
-            }
-
-            val routedDevicesList = mutableListOf<Map<String, Any>>()
+            val routedDevicesList = mutableListOf<RoutedDevice>()
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
                 val devices = track.routedDevices
                 for (device in devices) {
-                    routedDevicesList.add(mapOf(
-                        "name" to device.productName.toString(),
-                        "type" to "${AudioDeviceManager(context).getDeviceTypeName(device.type)} (${device.type})",
-                        "id" to device.id
+                    routedDevicesList.add(RoutedDevice(
+                        name = device.productName.toString(),
+                        type = "${AudioDeviceManager(context).getDeviceTypeName(device.type)} (${device.type})",
+                        id = device.id
                     ))
                 }
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 track.routedDevice?.let { device ->
-                    routedDevicesList.add(mapOf(
-                        "name" to device.productName.toString(),
-                        "type" to "${AudioDeviceManager(context).getDeviceTypeName(device.type)} (${device.type})",
-                        "id" to device.id
+                    routedDevicesList.add(RoutedDevice(
+                        name = device.productName.toString(),
+                        type = "${AudioDeviceManager(context).getDeviceTypeName(device.type)} (${device.type})",
+                        id = device.id
                     ))
                 }
             }
 
-            if (routedDevicesList.isNotEmpty()) {
-                infoMap["routedDevices"] = routedDevicesList
-            }
-
-            val routedList = routedDevicesList.map { 
-                RoutedDevice(it["name"] as String, it["type"] as String, it["id"] as Int)
-            }
             val audioInfo = AudioInfo(
                 id = instanceId,
                 sampleRate = track.sampleRate,
@@ -626,10 +604,24 @@ class AudioPlaybackManager(private val activity: Activity) {
                 isOffloaded = isOffloaded,
                 usage = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) track.audioAttributes.usage else null,
                 contentType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) track.audioAttributes.contentType else null,
-                flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) track.audioAttributes.flags else null,
-                routedDevices = if (routedList.isNotEmpty()) routedList else null
+                flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) getRawFlagsViaParcel(track.audioAttributes) else null,
+                routedDevices = if (routedDevicesList.isNotEmpty()) routedDevicesList else null
             )
             AudioEngine.notifyAudioInfo(audioInfo)
+        }
+    }
+
+    private fun getRawFlagsViaParcel(attrs: AudioAttributes): Int {
+        val parcel = android.os.Parcel.obtain()
+        return try {
+            attrs.writeToParcel(parcel, 0)
+            parcel.setDataPosition(12) // offset 12 is mFlags
+            parcel.readInt()
+        } catch (e: Exception) {
+            Log.w("AudioPlaybackManager", "Failed to read raw flags via Parcel", e)
+            attrs.flags // fallback to public masked getter
+        } finally {
+            parcel.recycle()
         }
     }
 }
