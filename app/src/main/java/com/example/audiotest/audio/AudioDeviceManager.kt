@@ -73,7 +73,7 @@ class AudioDeviceManager(private val context: Context) {
                 getStrategiesMethod.invoke(audioManager) as? List<*>
             } ?: return false
             
-            val getAttrsForStreamType = strategyClass.getMethod("getAudioAttributesForStreamType", Int::class.javaPrimitiveType)
+            val getAttrsForStreamType = strategyClass.getMethod("getAudioAttributesForLegacyStreamType", Int::class.javaPrimitiveType)
             getAttrsForStreamType.isAccessible = true
             val strategy = strategies.firstOrNull { 
                 getAttrsForStreamType.invoke(it, streamType) != null
@@ -122,7 +122,7 @@ class AudioDeviceManager(private val context: Context) {
                 getStrategiesMethod.invoke(audioManager) as? List<*>
             } ?: return false
             
-            val getAttrsForStreamType = strategyClass.getMethod("getAudioAttributesForStreamType", Int::class.javaPrimitiveType)
+            val getAttrsForStreamType = strategyClass.getMethod("getAudioAttributesForLegacyStreamType", Int::class.javaPrimitiveType)
             getAttrsForStreamType.isAccessible = true
             val strategy = strategies.firstOrNull { 
                 getAttrsForStreamType.invoke(it, streamType) != null
