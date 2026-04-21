@@ -33,7 +33,7 @@ class AudioPlaybackManager(private val activity: Activity) {
         usage: Int,
         contentType: Int,
         flags: Int,
-        strategy: Int,
+        streamType: Int,
         preferredDeviceId: Int?,
         filePath: String?,
         offload: Boolean
@@ -50,7 +50,7 @@ class AudioPlaybackManager(private val activity: Activity) {
             return
         }
 
-        val audioAttributes = buildAudioAttributes(usage, contentType, flags, strategy)
+        val audioAttributes = buildAudioAttributes(usage, contentType, flags, streamType)
 
         isPlayingMap[instanceId] = true
         isPausedMap[instanceId] = false
@@ -523,10 +523,10 @@ class AudioPlaybackManager(private val activity: Activity) {
      *   offset 12 → mFlags       (int)  ← patch here
      * The private Parcel constructor reads mFlags directly without filtering.
      */
-    private fun buildAudioAttributes(usage: Int, contentType: Int, flags: Int, strategy: Int): AudioAttributes {
+    private fun buildAudioAttributes(usage: Int, contentType: Int, flags: Int, streamType: Int): AudioAttributes {
         val builder = AudioAttributes.Builder()
-        if (strategy != -1) {
-            builder.setLegacyStreamType(strategy)
+        if (streamType != -1) {
+            builder.setLegacyStreamType(streamType)
         } else {
             builder.setUsage(usage)
             builder.setContentType(contentType)
@@ -535,7 +535,7 @@ class AudioPlaybackManager(private val activity: Activity) {
         val built = builder.build()
 
         // If flags survived Builder's filter (or nothing special requested), use as-is
-        if (strategy != -1 || flags == 0 || built.flags == flags) return built
+        if (streamType != -1 || flags == 0 || built.flags == flags) return built
 
         Log.d("AudioPlaybackManager",
             "setFlags stripped hidden flags: built=0x${built.flags.toString(16).uppercase()}, " +

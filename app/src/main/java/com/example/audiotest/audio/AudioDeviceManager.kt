@@ -73,9 +73,10 @@ class AudioDeviceManager(private val context: Context) {
                 getStrategiesMethod.invoke(audioManager) as? List<*>
             } ?: return false
             
-            val supportsStreamMethod = strategyClass.getMethod("supportsAudioStreamType", Int::class.javaPrimitiveType)
+            val getAttrsForStreamType = strategyClass.getMethod("getAudioAttributesForStreamType", Int::class.javaPrimitiveType)
+            getAttrsForStreamType.isAccessible = true
             val strategy = strategies.firstOrNull { 
-                supportsStreamMethod.invoke(it, streamType) as? Boolean == true 
+                getAttrsForStreamType.invoke(it, streamType) != null
             } ?: return false
 
             // 2. Get device
@@ -121,9 +122,10 @@ class AudioDeviceManager(private val context: Context) {
                 getStrategiesMethod.invoke(audioManager) as? List<*>
             } ?: return false
             
-            val supportsStreamMethod = strategyClass.getMethod("supportsAudioStreamType", Int::class.javaPrimitiveType)
+            val getAttrsForStreamType = strategyClass.getMethod("getAudioAttributesForStreamType", Int::class.javaPrimitiveType)
+            getAttrsForStreamType.isAccessible = true
             val strategy = strategies.firstOrNull { 
-                supportsStreamMethod.invoke(it, streamType) as? Boolean == true 
+                getAttrsForStreamType.invoke(it, streamType) != null
             } ?: return false
 
             val removePreferredMethod = AudioManager::class.java.getMethod("removePreferredDeviceForStrategy", strategyClass)
