@@ -197,9 +197,24 @@ fun VoipScreen(viewModel: AudioViewModel, modifier: Modifier = Modifier, instanc
         }
     }
 
-    // Channel config maps
-    val outputChannelMap = mapOf("Mono (Out)" to AudioFormat.CHANNEL_OUT_MONO, "Stereo (Out)" to AudioFormat.CHANNEL_OUT_STEREO)
-    val inputChannelMap = mapOf("Mono (In)" to AudioFormat.CHANNEL_IN_MONO, "Stereo (In)" to AudioFormat.CHANNEL_IN_STEREO)
+    // Channel config entries (dynamic)
+    val outputChannelEntries = if (AudioEngine.cachedOutputChannelMap.isEmpty()) {
+        mapOf("CHANNEL_OUT_MONO" to AudioFormat.CHANNEL_OUT_MONO, "CHANNEL_OUT_STEREO" to AudioFormat.CHANNEL_OUT_STEREO)
+    } else {
+        AudioEngine.cachedOutputChannelMap
+    }.entries.sortedBy { it.value }.associate {
+        "${it.key.removePrefix("CHANNEL_OUT_")} (0x${it.value.toString(16).uppercase()})" to it.value
+    }
+
+    val inputChannelEntries = if (AudioEngine.cachedInputChannelMap.isEmpty()) {
+        mapOf("CHANNEL_IN_MONO" to AudioFormat.CHANNEL_IN_MONO, "CHANNEL_IN_STEREO" to AudioFormat.CHANNEL_IN_STEREO)
+    } else {
+        AudioEngine.cachedInputChannelMap
+    }.entries.sortedBy { it.value }.associate {
+        "${it.key.removePrefix("CHANNEL_IN_")} (0x${it.value.toString(16).uppercase()})" to it.value
+    }
+
+    // Audio format (hardcoded)
     val audioFormatMapDropdown = mapOf(
         "8-bit PCM" to AudioFormat.ENCODING_PCM_8BIT,
         "16-bit PCM" to AudioFormat.ENCODING_PCM_16BIT,
@@ -257,7 +272,7 @@ fun VoipScreen(viewModel: AudioViewModel, modifier: Modifier = Modifier, instanc
 
             // RX Channel Config
             DropdownSelector(
-                "RX Channel Config", outputChannelMap, rxChannelConfig,
+                "RX Channel Config", outputChannelEntries, rxChannelConfig,
                 { rxChannelConfig = it },
                 enabled = !isCalling
             )
@@ -306,7 +321,7 @@ fun VoipScreen(viewModel: AudioViewModel, modifier: Modifier = Modifier, instanc
 
             // TX Channel Config
             DropdownSelector(
-                "TX Channel Config", inputChannelMap, txChannelConfig,
+                "TX Channel Config", inputChannelEntries, txChannelConfig,
                 { txChannelConfig = it },
                 enabled = !isCalling
             )

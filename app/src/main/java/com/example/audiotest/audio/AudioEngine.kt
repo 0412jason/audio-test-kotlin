@@ -29,6 +29,8 @@ object AudioEngine {
     var cachedFlagsMap = emptyMap<String, Int>()
     var cachedAudioSourcesMap = emptyMap<String, Int>()
     var cachedStreamTypesMap = emptyMap<String, Int>()
+    var cachedOutputChannelMap = emptyMap<String, Int>()
+    var cachedInputChannelMap = emptyMap<String, Int>()
 
     fun init(activity: Activity) {
         if (isInitialized) return
@@ -42,6 +44,8 @@ object AudioEngine {
         cachedFlagsMap = options["flags"] ?: emptyMap()
         cachedAudioSourcesMap = AudioInfoHelper.getAudioSourceOptions()
         cachedStreamTypesMap = AudioInfoHelper.getAudioStreamOptions()
+        cachedOutputChannelMap = AudioInfoHelper.getOutputChannelOptions()
+        cachedInputChannelMap = AudioInfoHelper.getInputChannelOptions()
         
         isInitialized = true
     }

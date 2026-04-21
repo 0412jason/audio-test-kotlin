@@ -51,6 +51,7 @@ fun RecordScreen(viewModel: AudioViewModel, modifier: Modifier = Modifier, insta
     // Dynamic maps
     var audioSources by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     var audioModes by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+    var inputChannelMap by remember { mutableStateOf(AudioEngine.cachedInputChannelMap) }
 
     val deviceChange by viewModel.deviceChangeData.collectAsState()
 
@@ -62,6 +63,7 @@ fun RecordScreen(viewModel: AudioViewModel, modifier: Modifier = Modifier, insta
             putAll(AudioInfoHelper.getAudioModeOptions().entries.sortedBy { it.value }.associate { it.key to it.value })
         }
         inputDevices = AudioEngine.deviceManager.getAudioDevices(false)
+        inputChannelMap = AudioEngine.cachedInputChannelMap
     }
 
     // Listen for device changes
@@ -126,8 +128,15 @@ fun RecordScreen(viewModel: AudioViewModel, modifier: Modifier = Modifier, insta
         }
     }
 
-    // Channel config maps
-    val inputChannelMap = mapOf("Mono (In)" to AudioFormat.CHANNEL_IN_MONO, "Stereo (In)" to AudioFormat.CHANNEL_IN_STEREO)
+    // Channel config entries
+    val inputChannelEntries = if (inputChannelMap.isEmpty()) {
+        mapOf("CHANNEL_IN_MONO" to AudioFormat.CHANNEL_IN_MONO, "CHANNEL_IN_STEREO" to AudioFormat.CHANNEL_IN_STEREO)
+    } else {
+        inputChannelMap
+    }.entries.sortedBy { it.value }.associate {
+        "${it.key.removePrefix("CHANNEL_IN_")} (0x${it.value.toString(16).uppercase()})" to it.value
+    }
+
     val audioFormatMapDropdown = mapOf(
         "8-bit PCM" to AudioFormat.ENCODING_PCM_8BIT,
         "16-bit PCM" to AudioFormat.ENCODING_PCM_16BIT,
@@ -157,7 +166,7 @@ fun RecordScreen(viewModel: AudioViewModel, modifier: Modifier = Modifier, insta
 
             // Channel Config
             DropdownSelector(
-                "Channel Config", inputChannelMap, channelConfig,
+                "Channel Config", inputChannelEntries, channelConfig,
                 { channelConfig = it },
                 enabled = !isRecording
             )

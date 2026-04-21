@@ -64,6 +64,7 @@ fun PlaybackScreen(viewModel: AudioViewModel, modifier: Modifier = Modifier, ins
     var contentTypesMap by remember { mutableStateOf(AudioEngine.cachedContentTypesMap) }
     var flagsMap by remember { mutableStateOf(AudioEngine.cachedFlagsMap) }
     var streamTypeMap by remember { mutableStateOf(AudioEngine.cachedStreamTypesMap) }
+    var outputChannelMap by remember { mutableStateOf(AudioEngine.cachedOutputChannelMap) }
     var audioModes by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
 
     val deviceChange by viewModel.deviceChangeData.collectAsState()
@@ -102,6 +103,7 @@ fun PlaybackScreen(viewModel: AudioViewModel, modifier: Modifier = Modifier, ins
         contentTypesMap = AudioEngine.cachedContentTypesMap
         flagsMap = AudioEngine.cachedFlagsMap
         streamTypeMap = AudioEngine.cachedStreamTypesMap
+        outputChannelMap = AudioEngine.cachedOutputChannelMap
         audioModes = buildMap {
             put("BYPASS", -3)
             putAll(AudioInfoHelper.getAudioModeOptions().entries.sortedBy { it.value }.associate { it.key to it.value })
@@ -203,8 +205,15 @@ fun PlaybackScreen(viewModel: AudioViewModel, modifier: Modifier = Modifier, ins
         }
     }
 
-    // Channel config maps
-    val outputChannelMap = mapOf("Mono (Out)" to AudioFormat.CHANNEL_OUT_MONO, "Stereo (Out)" to AudioFormat.CHANNEL_OUT_STEREO)
+    // Channel config entries
+    val outputChannelEntries = if (outputChannelMap.isEmpty()) {
+        mapOf("CHANNEL_OUT_MONO" to AudioFormat.CHANNEL_OUT_MONO, "CHANNEL_OUT_STEREO" to AudioFormat.CHANNEL_OUT_STEREO)
+    } else {
+        outputChannelMap
+    }.entries.sortedBy { it.value }.associate {
+        "${it.key.removePrefix("CHANNEL_OUT_")} (0x${it.value.toString(16).uppercase()})" to it.value
+    }
+
     val audioFormatMapDropdown = mapOf(
         "8-bit PCM" to AudioFormat.ENCODING_PCM_8BIT,
         "16-bit PCM" to AudioFormat.ENCODING_PCM_16BIT,
@@ -284,7 +293,7 @@ fun PlaybackScreen(viewModel: AudioViewModel, modifier: Modifier = Modifier, ins
 
             // Channel Config
             DropdownSelector(
-                "Channel Config", outputChannelMap, channelConfig,
+                "Channel Config", outputChannelEntries, channelConfig,
                 { channelConfig = it },
                 enabled = !isPlaying && (playbackSource == 0 || detectedFileInfo == null)
             )

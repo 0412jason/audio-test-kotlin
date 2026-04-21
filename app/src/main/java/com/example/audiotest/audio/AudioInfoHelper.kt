@@ -105,6 +105,38 @@ object AudioInfoHelper {
         return mapOf("usages" to usages, "contentTypes" to contentTypes, "flags" to flags)
     }
 
+    fun getOutputChannelOptions(): Map<String, Int> {
+        val options = mutableMapOf<String, Int>()
+        for (field in AudioFormat::class.java.declaredFields) {
+            try {
+                field.isAccessible = true
+                if (field.type == Int::class.javaPrimitiveType && field.name.startsWith("CHANNEL_OUT_")) {
+                    val value = field.getInt(null)
+                    options[field.name] = value
+                }
+            } catch (e: Exception) {
+                // Ignore inaccessible fields
+            }
+        }
+        return options
+    }
+
+    fun getInputChannelOptions(): Map<String, Int> {
+        val options = mutableMapOf<String, Int>()
+        for (field in AudioFormat::class.java.declaredFields) {
+            try {
+                field.isAccessible = true
+                if (field.type == Int::class.javaPrimitiveType && field.name.startsWith("CHANNEL_IN_")) {
+                    val value = field.getInt(null)
+                    options[field.name] = value
+                }
+            } catch (e: Exception) {
+                // Ignore inaccessible fields
+            }
+        }
+        return options
+    }
+
     fun getFileAudioInfo(filePath: String): Map<String, Int>? {
         val extractor = MediaExtractor()
         return try {
