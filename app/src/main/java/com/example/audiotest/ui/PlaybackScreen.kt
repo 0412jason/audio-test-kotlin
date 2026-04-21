@@ -36,7 +36,7 @@ fun PlaybackScreen(viewModel: AudioViewModel, modifier: Modifier = Modifier, ins
     var usage by remember { mutableIntStateOf(1) } // USAGE_MEDIA
     var contentType by remember { mutableIntStateOf(2) } // CONTENT_TYPE_MUSIC
     var flags by remember { mutableIntStateOf(0) }
-    var strategy by remember { mutableIntStateOf(-1) }
+    var streamType by remember { mutableIntStateOf(-1) }
     var selectedMode by remember { mutableIntStateOf(-3) } // BYPASS default
     var isPlaying by remember { mutableStateOf(false) }
     var isPaused by remember { mutableStateOf(false) }
@@ -63,7 +63,7 @@ fun PlaybackScreen(viewModel: AudioViewModel, modifier: Modifier = Modifier, ins
     var usagesMap by remember { mutableStateOf(AudioEngine.cachedUsagesMap) }
     var contentTypesMap by remember { mutableStateOf(AudioEngine.cachedContentTypesMap) }
     var flagsMap by remember { mutableStateOf(AudioEngine.cachedFlagsMap) }
-    var strategyMap by remember { mutableStateOf(AudioEngine.cachedStreamTypesMap) }
+    var streamTypeMap by remember { mutableStateOf(AudioEngine.cachedStreamTypesMap) }
     var audioModes by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
 
     val deviceChange by viewModel.deviceChangeData.collectAsState()
@@ -101,7 +101,7 @@ fun PlaybackScreen(viewModel: AudioViewModel, modifier: Modifier = Modifier, ins
         usagesMap = AudioEngine.cachedUsagesMap
         contentTypesMap = AudioEngine.cachedContentTypesMap
         flagsMap = AudioEngine.cachedFlagsMap
-        strategyMap = AudioEngine.cachedStreamTypesMap
+        streamTypeMap = AudioEngine.cachedStreamTypesMap
         audioModes = buildMap {
             put("BYPASS", -3)
             putAll(AudioInfoHelper.getAudioModeOptions().entries.sortedBy { it.value }.associate { it.key to it.value })
@@ -172,14 +172,14 @@ fun PlaybackScreen(viewModel: AudioViewModel, modifier: Modifier = Modifier, ins
         }
     }
 
-    val strategyEntries = if (strategyMap.isEmpty()) {
+    val streamTypeEntries = if (streamTypeMap.isEmpty()) {
         mapOf(
             "Manual (-1)" to -1,
         )
     } else {
         buildMap {
             put("Manual (-1)", -1)
-            putAll(strategyMap.entries.sortedBy { it.value }.associate {
+            putAll(streamTypeMap.entries.sortedBy { it.value }.associate {
                 "${it.key} (${it.value})" to it.value
             })
         }
@@ -298,10 +298,10 @@ fun PlaybackScreen(viewModel: AudioViewModel, modifier: Modifier = Modifier, ins
             )
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Strategy
+            // Stream Type
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Box(modifier = Modifier.weight(1f)) {
-                    DropdownSelector("Strategy", strategyEntries, strategy, { strategy = it }, enabled = !isPlaying)
+                    DropdownSelector("Stream Type", streamTypeEntries, streamType, { streamType = it }, enabled = !isPlaying)
                 }
                 IconButton(onClick = { showPreferredDeviceDialog = true }) {
                     Icon(Icons.Filled.Settings, contentDescription = "Preferred Device Settings")
@@ -310,15 +310,15 @@ fun PlaybackScreen(viewModel: AudioViewModel, modifier: Modifier = Modifier, ins
             Spacer(modifier = Modifier.height(4.dp))
 
             // Usage
-            DropdownSelector("Usage", usageEntries, usage, { usage = it }, enabled = !isPlaying && strategy == -1)
+            DropdownSelector("Usage", usageEntries, usage, { usage = it }, enabled = !isPlaying && streamType == -1)
             Spacer(modifier = Modifier.height(4.dp))
 
             // Content Type
-            DropdownSelector("Content Type", contentTypeEntries, contentType, { contentType = it }, enabled = !isPlaying && strategy == -1)
+            DropdownSelector("Content Type", contentTypeEntries, contentType, { contentType = it }, enabled = !isPlaying && streamType == -1)
             Spacer(modifier = Modifier.height(4.dp))
 
             // Flags
-            DropdownSelector("Flags", flagEntries, flags, { flags = it }, enabled = !isPlaying && strategy == -1)
+            DropdownSelector("Flags", flagEntries, flags, { flags = it }, enabled = !isPlaying && streamType == -1)
             Spacer(modifier = Modifier.height(4.dp))
 
             // Audio Mode
@@ -341,7 +341,7 @@ fun PlaybackScreen(viewModel: AudioViewModel, modifier: Modifier = Modifier, ins
             
             if (showPreferredDeviceDialog) {
                 PreferredDeviceDialog(
-                    strategyMap = strategyMap,
+                    strategyMap = streamTypeMap,
                     onDismissRequest = { showPreferredDeviceDialog = false }
                 )
             }
@@ -383,7 +383,7 @@ fun PlaybackScreen(viewModel: AudioViewModel, modifier: Modifier = Modifier, ins
                         }
                         AudioEngine.playbackManager.startPlayback(
                             instanceId, sampleRate, channelConfig, audioFormat,
-                            usage, contentType, flags, strategy, selectedDeviceId,
+                            usage, contentType, flags, streamType, selectedDeviceId,
                             if (playbackSource == 1) localFilePath else null,
                             enableOffload
                         )
